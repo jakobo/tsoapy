@@ -1,14 +1,19 @@
 {
   "name": "tsoapy",
-  "version": "0.0.1",
   "description": "TypeScript OpenAPI Client",
+  "version": "0.0.1",
+  "author": "Jakob Heuser",
+  "license": "MIT",
+  "homepage": "https://github.com/jakobo/tsoapy/",
+  "repository": "jakobo/tsoapy.git",
   "scripts": {
     "build": "run-s tsup",
     "clean": "shx rm -rf dist && shx mkdir dist",
+    "lint-staged": "lint-staged",
+    "rel": "release-it",
     "test": "echo \"Error: no test specified\" && exit 1",
     "tsup": "tsup",
-    "typecheck": "tsc --noEmit",
-    "rel": "release-it"
+    "typecheck": "tsc --noEmit"
   },
   "tsup": {
     "entry": {
@@ -24,6 +29,7 @@
     "clean": true,
     "minify": false
   },
+  "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -40,10 +46,10 @@
     "dist",
     "src"
   ],
-  "author": "Jakob Heuser",
-  "license": "MIT",
-  "homepage": "https://github.com/jakobo/tsoapy/",
-  "repository": "jakobo/tsoapy.git",
+  "engines": {
+    "node": ">=14.19.0",
+    "pnpm": "7.x"
+  },
   "devDependencies": {
     "@commitlint/cli": "^15.0.0",
     "@commitlint/config-conventional": "^15.0.0",
@@ -64,10 +70,5 @@
     "syncpack": "^7.2.1",
     "tsup": "^6.2.3",
     "typescript": "^4.8.3"
-  },
-  "type": "module",
-  "engines": {
-    "node": ">=14.19.0",
-    "pnpm": "7.x"
   }
 }
