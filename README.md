@@ -67,7 +67,7 @@ Descriptions here provide a generic type such as `string` for clarity, but use a
 | arg         | description                                                                                                                                                                                                                         |
 | :---------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | method      | `string` A method contained in `OpenAPI[path]`                                                                                                                                                                                      |
-| contentType | `string` A supported content type found in `OpenAPI[path][method]`                                                                                                                                                                  |
+| contentType | `string` A supported content type found in `OpenAPI[path][method].requestBody.content`                                                                                                                                              |
 | serialize   | `function` A function that takes in the arguments of `OpenAPI[path][method].requestBody.content[contentType]` and returns a `string`. Defaults to `JSON.serialize` for `application/json` and `toString()` for other content types. |
 
 **Returns:** A tsoapy builder object for configuring the request data, containing `params`, `query`, `body`, and `send`
@@ -96,7 +96,13 @@ Descriptions here provide a generic type such as `string` for clarity, but use a
 
 **Returns:** A tsoapy builder object for configuring the request data, containing `params`, `query`, `body`, and `send`
 
-#### `async .send()`
+#### `async .send(options?: RequestInit, contentType?: string, deserialize?: Function)`
+
+| arg         | description                                                                                                                                                                                                                                                        |
+| :---------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| options     | `RequestInit` Additional fetch options, in addition to any specified in the original `tsoapy` call                                                                                                                                                                 |
+| contentType | `string` A supported content type found in `OpenAPI[path][method].responses[*].content`                                                                                                                                                                            |
+| deserialize | `function` A function that takes in a `string` and `statusCode`, and returns a value consistent with `OpenAPI[path][method].responses[statusCode].content[contentType]`. Defaults to `JSON.parse` for `application/json` and `toString()` for other content types. |
 
 **Returns:** A tsoapy response as a discriminated union in the following format:
 

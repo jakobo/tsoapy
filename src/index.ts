@@ -40,11 +40,12 @@ export const tsoapy = <T extends OAPIPaths<T>>(
         let _body: string;
 
         // constants defined by calling method()
-        const _mimeType = contentType ?? "application/json";
+        const _contentType = contentType ?? "application/json";
         const bestEffort = (d: unknown) =>
           d && typeof d === "object" && "toString" in d ? d.toString() : `${d}`;
         const serializer =
-          _mimeType === "application/json" && typeof serialize === "undefined"
+          _contentType === "application/json" &&
+          typeof serialize === "undefined"
             ? JSON.stringify
             : serialize ?? bestEffort;
 
@@ -68,7 +69,7 @@ export const tsoapy = <T extends OAPIPaths<T>>(
             RCT extends ContentTypeOut<T, P, M> = DefaultContentTypeOut<T, P, M>
           >(
             options?: RequestInit,
-            mimeType?: RCT,
+            contentType?: RCT,
             deserialize?: Deserializer<
               string,
               ResultCodeOf<T, P, M>,
@@ -89,7 +90,7 @@ export const tsoapy = <T extends OAPIPaths<T>>(
               string,
               ResultCodeOf<T, P, M>,
               ResultOf<T, P, M, ResultCodeOf<T, P, M>, RCT>
-            > = deserialize ?? mimeType === "application/json"
+            > = deserialize ?? contentType === "application/json"
               ? (t) => JSON.parse(t)
               : noop;
 
