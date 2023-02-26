@@ -9,13 +9,13 @@
   "scripts": {
     "build": "run-s tsup",
     "clean": "shx rm -rf dist && shx mkdir dist",
+    "gen": "run-p 'generate:*'",
+    "generate:petstore": "openapi-typescript https://petstore3.swagger.io/api/v3/openapi.yaml --path-params-as-types --output ./src/__generated__/petstore.ts",
     "lint-staged": "lint-staged",
     "rel": "release-it",
     "test": "echo \"Error: no test specified\" && exit 1",
     "tsup": "tsup",
-    "typecheck": "tsc --noEmit",
-    "gen": "run-p 'generate:*'",
-    "generate:petstore": "openapi-typescript https://petstore3.swagger.io/api/v3/openapi.yaml --path-params-as-types --output ./src/__generated__/petstore.ts"
+    "typecheck": "tsc --noEmit"
   },
   "tsup": {
     "entry": {

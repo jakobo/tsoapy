@@ -77,7 +77,14 @@ export const tsoapy = <T extends OAPIPaths<T>>(
           ): Promise<OAPIResponse<T, P, M, RMT>> => {
             const { fetch: of, ...init } = ctx ?? {};
             const f = (of ?? globalThis.fetch ?? fetch) as typeof fetch;
-            const noop = (t: unknown) => t;
+
+            // force the noop to a passthrough deserializer
+            const noop = ((t: unknown) => t) as Deserializer<
+              string,
+              ResultCodeOf<T, P, M>,
+              ResultOf<T, P, M, ResultCodeOf<T, P, M>, RMT>
+            >;
+
             const deserializer: Deserializer<
               string,
               ResultCodeOf<T, P, M>,
