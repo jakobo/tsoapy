@@ -1,11 +1,11 @@
 import type {
-  DefaultMimeTypeIn,
-  DefaultMimeTypeOut,
+  ContentTypeIn,
+  ContentTypeOut,
+  DefaultContentTypeIn,
+  DefaultContentTypeOut,
   Deserializer,
   ExtendedRequestInit,
   MethodIn,
-  MimeTypeIn,
-  MimeTypeOut,
   OAPIPaths,
   OAPIResponse,
   ParamsIn,
@@ -25,22 +25,22 @@ export const tsoapy = <T extends OAPIPaths<T>>(
     return {
       method: <
         M extends MethodIn<T, P>,
-        MT extends MimeTypeIn<T, P, M> = DefaultMimeTypeIn<T, P, M>
+        CT extends ContentTypeIn<T, P, M> = DefaultContentTypeIn<T, P, M>
       >(
         method: M,
-        mimeType?: MT,
-        serialize?: Serializer<RequestOf<T, P, M, MT>, string>
+        contentType?: CT,
+        serialize?: Serializer<RequestOf<T, P, M, CT>, string>
       ) => {
         // configurable by builder methods
         let _params: ParamsIn<T, P, M> | undefined;
         let _query: QueryIn<T, P, M> | undefined;
         let _localHeaders: HeadersInit = {
-          "Content-Type": mimeType ?? "application/json",
+          "Content-Type": contentType ?? "application/json",
         };
         let _body: string;
 
         // constants defined by calling method()
-        const _mimeType = mimeType ?? "application/json";
+        const _mimeType = contentType ?? "application/json";
         const bestEffort = (d: unknown) =>
           d && typeof d === "object" && "toString" in d ? d.toString() : `${d}`;
         const serializer =
@@ -58,23 +58,23 @@ export const tsoapy = <T extends OAPIPaths<T>>(
             _query = query;
             return builder;
           },
-          body: <RQ extends RequestOf<T, P, M, MT> = RequestOf<T, P, M, MT>>(
+          body: <RQ extends RequestOf<T, P, M, CT> = RequestOf<T, P, M, CT>>(
             request?: RQ
           ) => {
             _body = serializer(request);
             return builder;
           },
           send: async <
-            RMT extends MimeTypeOut<T, P, M> = DefaultMimeTypeOut<T, P, M>
+            RCT extends ContentTypeOut<T, P, M> = DefaultContentTypeOut<T, P, M>
           >(
             options?: RequestInit,
-            mimeType?: RMT,
+            mimeType?: RCT,
             deserialize?: Deserializer<
               string,
               ResultCodeOf<T, P, M>,
-              ResultOf<T, P, M, ResultCodeOf<T, P, M>, RMT>
+              ResultOf<T, P, M, ResultCodeOf<T, P, M>, RCT>
             >
-          ): Promise<OAPIResponse<T, P, M, RMT>> => {
+          ): Promise<OAPIResponse<T, P, M, RCT>> => {
             const { fetch: of, ...init } = ctx ?? {};
             const f = (of ?? globalThis.fetch ?? fetch) as typeof fetch;
 
@@ -82,13 +82,13 @@ export const tsoapy = <T extends OAPIPaths<T>>(
             const noop = ((t: unknown) => t) as Deserializer<
               string,
               ResultCodeOf<T, P, M>,
-              ResultOf<T, P, M, ResultCodeOf<T, P, M>, RMT>
+              ResultOf<T, P, M, ResultCodeOf<T, P, M>, RCT>
             >;
 
             const deserializer: Deserializer<
               string,
               ResultCodeOf<T, P, M>,
-              ResultOf<T, P, M, ResultCodeOf<T, P, M>, RMT>
+              ResultOf<T, P, M, ResultCodeOf<T, P, M>, RCT>
             > = deserialize ?? mimeType === "application/json"
               ? (t) => JSON.parse(t)
               : noop;
@@ -132,7 +132,7 @@ export const tsoapy = <T extends OAPIPaths<T>>(
             >;
             const t = await res.text();
             const j = deserializer(t, status);
-            const resp: OAPIResponse<T, P, M, RMT> = {
+            const resp: OAPIResponse<T, P, M, RCT> = {
               success: status === 200,
               status: status,
               data: j,

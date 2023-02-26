@@ -8,14 +8,14 @@ export type OAPIPaths<T> = {
       requestBody?: {
         content: {
           "application/json"?: unknown;
-          [mime: string]: unknown;
+          [contentType: string]: unknown;
         };
       };
       responses: {
         [S: number]: {
           content: {
             "application/json"?: unknown;
-            [mime: string]: unknown;
+            [contentType: string]: unknown;
           };
         };
       };
@@ -33,7 +33,7 @@ export type MethodIn<
 > = keyof T[P];
 
 /** Get all available Mime Types for a given OpenAPI collection, Path, and Method combo */
-export type MimeTypeIn<
+export type ContentTypeIn<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>,
   M extends MethodIn<T, P> = MethodIn<T, P>
@@ -54,19 +54,19 @@ export type MimeTypeIn<
   : // no OpenAPI 3 request bodies found
     never;
 
-/** Get the default Mime Type of application/json if it is available in MimeTypeIn */
-export type DefaultMimeTypeIn<
+/** Get the default Mime Type of application/json if it is available in ContentTypeIn */
+export type DefaultContentTypeIn<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>,
   M extends MethodIn<T, P> = MethodIn<T, P>
-> = MimeTypeIn<T, P, M> extends {
+> = ContentTypeIn<T, P, M> extends {
   ["application/json"]: unknown;
 }
-  ? MimeTypeIn<T, P, M>["application/json"]
-  : MimeTypeIn<T, P, M>;
+  ? ContentTypeIn<T, P, M>["application/json"]
+  : ContentTypeIn<T, P, M>;
 
 /** Get all available return Mime Types for a given OpenAPI collection, Path, and Method combo */
-export type MimeTypeOut<
+export type ContentTypeOut<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>,
   M extends MethodIn<T, P> = MethodIn<T, P>
@@ -80,16 +80,16 @@ export type MimeTypeOut<
   ? keyof MT
   : never;
 
-/** Get the default Mime Type of application/json if it is available in MimeTypeOut */
-export type DefaultMimeTypeOut<
+/** Get the default Mime Type of application/json if it is available in ContentTypeOut */
+export type DefaultContentTypeOut<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>,
   M extends MethodIn<T, P> = MethodIn<T, P>
-> = MimeTypeOut<T, P, M> extends {
+> = ContentTypeOut<T, P, M> extends {
   ["application/json"]: unknown;
 }
-  ? MimeTypeOut<T, P, M>["application/json"]
-  : MimeTypeOut<T, P, M>;
+  ? ContentTypeOut<T, P, M>["application/json"]
+  : ContentTypeOut<T, P, M>;
 
 /** Get the collection of Parameter substituions available for a given OpenAPI collection, Path, and Method combo */
 export type ParamsIn<
@@ -122,7 +122,7 @@ export type RequestOf<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>,
   M extends MethodIn<T, P> = MethodIn<T, P>,
-  MT extends MimeTypeOut<T, P, M> = MimeTypeOut<T, P, M>
+  MT extends ContentTypeOut<T, P, M> = ContentTypeOut<T, P, M>
 > = T[P][M] extends {
   requestBody?: {
     content: {
@@ -138,17 +138,6 @@ export type Serializer<T, R> = (input: T) => R;
 
 /** Deserialize from text (assumed to be of your MimeType format) to JSON */
 export type Deserializer<T, C extends number, R> = (input: T, status: C) => R;
-
-/** Helper type used to infer the body of the response */
-type ResponseBody<RB, C extends number, MimeType extends string> = {
-  responses: {
-    [Code in C]: {
-      content: {
-        [mime in MimeType]: RB;
-      };
-    };
-  };
-};
 
 /** Extract the status code type from the T.<path>.<method>.responses.<code> */
 export type ResultCodeOf<
@@ -169,7 +158,7 @@ export type ResultOf<
   P extends PathIn<T>,
   M extends MethodIn<T, P>,
   C extends number,
-  MT extends MimeTypeOut<T, P, M>
+  MT extends ContentTypeOut<T, P, M>
 > = T[P][M] extends {
   responses: {
     [Code in C]: {
@@ -187,7 +176,7 @@ export type OAPIResponse<
   T extends OAPIPaths<T>,
   P extends PathIn<T>,
   M extends MethodIn<T, P>,
-  MimeType extends MimeTypeOut<T, P, M>
+  MimeType extends ContentTypeOut<T, P, M>
 > = {
   success: boolean;
   status: ResultCodeOf<T, P, M>;
