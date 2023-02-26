@@ -1,4 +1,5 @@
 import type {
+  BuilderAPI,
   ContentTypeIn,
   ContentTypeOut,
   DefaultContentTypeIn,
@@ -50,49 +51,30 @@ export const tsoapy = <T extends OAPIPaths<T>>(
             : serialize ?? bestEffort;
 
         // chainable builder API, terminates on send()
-        const builder = {
-          params: <PI extends ParamsIn<T, P, M>>(params: PI) => {
+        const builder: BuilderAPI<T, P, M, CT> = {
+          params(params) {
             _params = params;
             return builder;
           },
-          query: <QS extends QueryIn<T, P, M>>(query: QS) => {
+          query(query) {
             _query = query;
             return builder;
           },
-          body: <RQ extends RequestOf<T, P, M, CT> = RequestOf<T, P, M, CT>>(
-            request?: RQ
-          ) => {
+          body(request) {
             _body = serializer(request);
             return builder;
           },
-          send: async <
-            RCT extends ContentTypeOut<T, P, M> = DefaultContentTypeOut<T, P, M>
-          >(
-            options?: RequestInit,
-            contentType?: RCT,
-            deserialize?: Deserializer<
-              string,
-              ResultCodeOf<T, P, M>,
-              ResultOf<T, P, M, ResultCodeOf<T, P, M>, RCT>
-            >
-          ): Promise<OAPIResponse<T, P, M, RCT>> => {
+          async send(options, contentType, deserialize) {
             const { fetch: of, ...init } = ctx ?? {};
             const f = (of ?? globalThis.fetch ?? fetch) as typeof fetch;
 
             // force the noop to a passthrough deserializer
-            const noop = ((t: unknown) => t) as Deserializer<
-              string,
-              ResultCodeOf<T, P, M>,
-              ResultOf<T, P, M, ResultCodeOf<T, P, M>, RCT>
-            >;
+            const noop = ((t: unknown) => t) as NonNullable<typeof deserialize>;
 
-            const deserializer: Deserializer<
-              string,
-              ResultCodeOf<T, P, M>,
-              ResultOf<T, P, M, ResultCodeOf<T, P, M>, RCT>
-            > = deserialize ?? contentType === "application/json"
-              ? (t) => JSON.parse(t)
-              : noop;
+            const deserializer: NonNullable<typeof deserialize> =
+              deserialize ?? contentType === "application/json"
+                ? (t) => JSON.parse(t)
+                : noop;
 
             // build final URL
             const req = new URL(url);
@@ -133,7 +115,12 @@ export const tsoapy = <T extends OAPIPaths<T>>(
             >;
             const t = await res.text();
             const j = deserializer(t, status);
-            const resp: OAPIResponse<T, P, M, RCT> = {
+            const resp: OAPIResponse<
+              T,
+              P,
+              M,
+              NonNullable<typeof contentType>
+            > = {
               success: status === 200,
               status: status,
               data: j,

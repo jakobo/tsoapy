@@ -139,6 +139,29 @@ export type Serializer<T, R> = (input: T) => R;
 /** Deserialize from text (assumed to be of your MimeType format) to JSON */
 export type Deserializer<T, C extends number, R> = (input: T, status: C) => R;
 
+/** The flexible builder API allows you to set params, query, body, and ultimately send the request */
+export type BuilderAPI<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T> = PathIn<T>,
+  M extends MethodIn<T, P> = MethodIn<T, P>,
+  CT extends ContentTypeIn<T, P, M> = DefaultContentTypeIn<T, P, M>
+> = {
+  params: <PI extends ParamsIn<T, P, M>>(params: PI) => BuilderAPI<T, P, M>;
+  query: <QS extends QueryIn<T, P, M>>(query: QS) => BuilderAPI<T, P, M>;
+  body: <RQ extends RequestOf<T, P, M, CT> = RequestOf<T, P, M, CT>>(
+    request?: RQ
+  ) => BuilderAPI<T, P, M>;
+  send: <RCT extends ContentTypeOut<T, P, M> = DefaultContentTypeOut<T, P, M>>(
+    options?: RequestInit,
+    contentType?: RCT,
+    deserialize?: Deserializer<
+      string,
+      ResultCodeOf<T, P, M>,
+      ResultOf<T, P, M, ResultCodeOf<T, P, M>, RCT>
+    >
+  ) => Promise<OAPIResponse<T, P, M, RCT>>;
+};
+
 /** Extract the status code type from the T.<path>.<method>.responses.<code> */
 export type ResultCodeOf<
   T extends OAPIPaths<T>,
