@@ -4,30 +4,43 @@
 
 # Usage
 
+Taken from the [./examples/petstore.ts](Pet Store Example)
+
 ```ts
-import { paths } from "./generated/type/file";
-import { tsoapy } from "tsoapy";
+import { paths } from "../__generated__/petstore";
+import { tsoapy } from "../";
 
-const client = tsoapy<paths>(new URL("https://example.com/api/endpoint"));
+const client = tsoapy<paths>(new URL("https://example.com/api/petstore"));
 
-const result = await client.path("/openapi/path").post({
-  // data is typed
-  ...data,
-});
+async function examples() {
+  const r1 = await client
+    .path("/store/order") // <= restricted to available paths
+    .method("post") // <= restricted to methods for your path
+    .body({
+      // <= automatically typed to your request's Mime Type
+      id: 123,
+      petId: 456,
+      quantity: 1,
+      shipDate: "2023-02-25T00:00:00Z",
+      status: "placed",
+      complete: false,
+    })
+    .send(); // <= send the data and get a fully typed response
 
-// result is a discriminated union
-if (result.success) {
-  // result.status is 200
-  // result.data contains the openapi response body, fully typed
-}
+  if (r1.success) {
+    // quickly check a status === 200
+  }
 
-// or, check it explicitly
-if (result.status === 200) {
-  // result.data contains the openapi response body for a 200 response, fully typed
+  if (r1.status === 200) {
+    // or do more detailed checks on the status code
+    r1.data.id; // <= from response
+  } else {
+    r1.data;
+  }
 }
 ```
 
-# Limitations
+# Stuff Still To Do
 
-- Only works with `application/json` right now.
-- Path substitution _should_ work if you used `--path-params-as-types` in `openapi-typescript`
+- Tests (maybe using MSW as the network is at the heart of this)
+- There's a coercion of `number` to `ResultCodeOf<T, P, M>` which I can't seem to get right

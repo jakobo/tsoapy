@@ -1,3 +1,4 @@
+/** Supported HTTP methods */
 type Method = "get" | "post" | "put" | "patch" | "delete" | "head" | "options";
 
 /** Describes the OpenAPI `paths` object */
@@ -6,13 +7,15 @@ export type OAPIPaths<T> = {
     [M in Method]?: {
       requestBody?: {
         content: {
-          "application/json": unknown;
+          "application/json"?: unknown;
+          [mime: string]: unknown;
         };
       };
       responses: {
         [S: number]: {
           content: {
-            "application/json": unknown;
+            "application/json"?: unknown;
+            [mime: string]: unknown;
           };
         };
       };
@@ -20,96 +23,178 @@ export type OAPIPaths<T> = {
   };
 };
 
-/** Used to infer the JSON request body */
-type RequestBody<RB> = {
+/** Get all available Paths for an OpenAPI collection */
+export type PathIn<T extends OAPIPaths<T>> = keyof T;
+
+/** Get all available Methods for a given OpenAPI collection and Path */
+export type MethodIn<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T> = PathIn<T>
+> = keyof T[P];
+
+/** Get all available Mime Types for a given OpenAPI collection, Path, and Method combo */
+export type MimeTypeIn<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T> = PathIn<T>,
+  M extends MethodIn<T, P> = MethodIn<T, P>
+> = T[P][M] extends {
+  // try path.requestBody?.content
   requestBody?: {
-    content: {
-      "application/json": RB;
+    content: infer MT;
+  };
+}
+  ? keyof MT
+  : // try path.requestBody.content
+  T[P][M] extends {
+      requestBody: {
+        content: infer MT_B;
+      };
+    }
+  ? keyof MT_B
+  : // no OpenAPI 3 request bodies found
+    never;
+
+/** Get the default Mime Type of application/json if it is available in MimeTypeIn */
+export type DefaultMimeTypeIn<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T> = PathIn<T>,
+  M extends MethodIn<T, P> = MethodIn<T, P>
+> = MimeTypeIn<T, P, M> extends {
+  ["application/json"]: unknown;
+}
+  ? MimeTypeIn<T, P, M>["application/json"]
+  : MimeTypeIn<T, P, M>;
+
+/** Get all available return Mime Types for a given OpenAPI collection, Path, and Method combo */
+export type MimeTypeOut<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T> = PathIn<T>,
+  M extends MethodIn<T, P> = MethodIn<T, P>
+> = T[P][M] extends {
+  responses: {
+    [code: number]: {
+      content: infer MT;
     };
   };
-};
+}
+  ? keyof MT
+  : never;
 
-/** Used to infer the status code of the response */
-type ResponseCode<C extends number> = {
-  responses: {
-    [Code in C]: unknown;
+/** Get the default Mime Type of application/json if it is available in MimeTypeOut */
+export type DefaultMimeTypeOut<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T> = PathIn<T>,
+  M extends MethodIn<T, P> = MethodIn<T, P>
+> = MimeTypeOut<T, P, M> extends {
+  ["application/json"]: unknown;
+}
+  ? MimeTypeOut<T, P, M>["application/json"]
+  : MimeTypeOut<T, P, M>;
+
+/** Get the collection of Parameter substituions available for a given OpenAPI collection, Path, and Method combo */
+export type ParamsIn<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T> = PathIn<T>,
+  M extends MethodIn<T, P> = MethodIn<T, P>
+> = T[P][M] extends {
+  parameters: {
+    path: infer S;
   };
-};
+}
+  ? S
+  : never;
 
-/** Used to infer the JSON body of the response */
-type ResponseBody<RB, C extends number> = {
+/** Get the collection of Query String arguments available for a given OpenAPI collection, Path, and Method combo */
+export type QueryIn<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T> = PathIn<T>,
+  M extends MethodIn<T, P> = MethodIn<T, P>
+> = T[P][M] extends {
+  parameters: {
+    query: infer S;
+  };
+}
+  ? S
+  : never;
+
+/** Get a specific request variant for a given OpenAPI collection, Path, Method, and MimeType combo */
+export type RequestOf<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T> = PathIn<T>,
+  M extends MethodIn<T, P> = MethodIn<T, P>,
+  MT extends MimeTypeOut<T, P, M> = MimeTypeOut<T, P, M>
+> = T[P][M] extends {
+  requestBody?: {
+    content: {
+      [mime in MT]: infer O;
+    };
+  };
+}
+  ? O
+  : never;
+
+/** Serialize from JSON to your requested MimeType format */
+export type Serializer<T, R> = (input: T) => R;
+
+/** Deserialize from text (assumed to be of your MimeType format) to JSON */
+export type Deserializer<T, C extends number, R> = (input: T, status: C) => R;
+
+/** Helper type used to infer the body of the response */
+type ResponseBody<RB, C extends number, MimeType extends string> = {
   responses: {
     [Code in C]: {
       content: {
-        "application/json": RB;
+        [mime in MimeType]: RB;
       };
     };
   };
 };
 
-/** Extract the Variables from the T.<path>.<method> */
-export type VariablesOf<
-  T extends OAPIPaths<T>,
-  P extends keyof T,
-  M extends keyof T[P]
-> = T[P][M] extends RequestBody<infer RB> ? RB : never;
-
-/** Extract the status code type from the T.<path>.<method> */
+/** Extract the status code type from the T.<path>.<method>.responses.<code> */
 export type ResultCodeOf<
   T extends OAPIPaths<T>,
-  P extends keyof T,
-  M extends keyof T[P]
-> = T[P][M] extends ResponseCode<infer C extends number> ? C : never;
+  P extends PathIn<T>,
+  M extends MethodIn<T, P>
+> = T[P][M] extends {
+  responses: {
+    [Code in infer C extends number]: unknown;
+  };
+}
+  ? C
+  : never;
 
-/** Extract the response body from the T.<path>.<method> */
+/** Extract the response body from the T.<path>.<method>.responses.<code>.content */
 export type ResultOf<
   T extends OAPIPaths<T>,
-  P extends keyof T,
-  M extends keyof T[P],
-  C extends number
-> = T[P][M] extends ResponseBody<infer RB, C> ? RB : never;
+  P extends PathIn<T>,
+  M extends MethodIn<T, P>,
+  C extends number,
+  MT extends MimeTypeOut<T, P, M>
+> = T[P][M] extends {
+  responses: {
+    [Code in C]: {
+      content: {
+        [mime in MT]: infer RB;
+      };
+    };
+  };
+}
+  ? RB
+  : never;
 
 /** Re-Describe the OpenAPI Response as a discriminated union, making it easier on developers */
 export type OAPIResponse<
   T extends OAPIPaths<T>,
-  P extends keyof T,
-  M extends keyof T[P]
+  P extends PathIn<T>,
+  M extends MethodIn<T, P>,
+  MimeType extends MimeTypeOut<T, P, M>
 > = {
   success: boolean;
   status: ResultCodeOf<T, P, M>;
-  data: ResultOf<T, P, M, ResultCodeOf<T, P, M>>;
+  data: ResultOf<T, P, M, ResultCodeOf<T, P, M>, MimeType>;
 };
 
 /** Extends the base fetch init with the ability to override our fetch function */
 export type ExtendedRequestInit = RequestInit & {
   fetch?: unknown;
-};
-
-/** List of options we can pass to our custom fetch utility */
-export type FtchOptions<V> = {
-  url: URL;
-  path: string;
-  method: Method;
-  variables: V;
-  ctx?: ExtendedRequestInit;
-  options?: RequestInit;
-};
-
-/** Describes a single OpenAPI operation */
-type Operation<
-  T extends OAPIPaths<T>,
-  P extends keyof T,
-  M extends keyof T[P]
-> = (
-  variables: VariablesOf<T, P, M>,
-  options?: RequestInit
-) => Promise<OAPIResponse<T, P, M>>;
-
-/** Descibes a generic representing all possible operations for a given endpoint */
-export type Operations<
-  T extends OAPIPaths<T>,
-  P extends keyof T,
-  M extends keyof T[P]
-> = {
-  [m in Method]: Operation<T, P, M>;
 };
