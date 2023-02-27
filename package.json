@@ -1,7 +1,7 @@
 {
   "name": "tsoapy",
   "description": "TypeScript OpenAPI Client",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": "Jakob Heuser",
   "license": "MIT",
   "homepage": "https://github.com/jakobo/tsoapy/",
