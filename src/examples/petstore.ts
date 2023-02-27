@@ -1,10 +1,10 @@
-import { paths } from "../__generated__/petstore";
-import { tsoapy } from "../";
+import { paths } from "../__generated__/petstore.js";
+import { tsoapy } from "../index.js";
 
 const client = tsoapy<paths>(new URL("https://example.com/api/petstore"));
 
 // a set of async examples
-async function examples() {
+export async function examples() {
   const r1 = await client
     .path("/store/order")
     .method("post")
@@ -30,9 +30,9 @@ async function examples() {
     .query({
       status: "available",
     })
-    .send<"application/xml">();
-  if (r1.status === 200) {
-    r1.data.id; // number | undefined
+    .send();
+  if (r2.status === 200) {
+    r2.data; // Pet[]
   } else {
     // no data
   }
@@ -41,7 +41,7 @@ async function examples() {
     .path("/pet")
     .method("put", "application/xml", (data) => {
       // a hypothetical JSON to XML transformer
-      return `<xml>...</xml>`;
+      return `<xml>${data}</xml>`;
     })
     .body({
       id: 9876,
@@ -80,12 +80,18 @@ async function examples() {
       // a type error, as every return value must conform with the valid
       // return types provided in the OpenAPI typings
     });
+  if (r3.status === 200) {
+    r3.data; // Pet
+  }
 
   const r4 = await client
     .path("/pet/{petId}")
     .method("get")
     .params({ petId: 12345 })
     .send();
+  if (r4.status === 200) {
+    r4.data; // Pet
+  }
 }
 
 export default {};

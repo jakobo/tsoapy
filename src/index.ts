@@ -9,9 +9,8 @@ import type {
   QueryIn,
   RequestContentType,
   ResultCodeOf,
-  RS,
   Serializer,
-} from "./types";
+} from "./types.js";
 
 export const tsoapy = <T extends OAPIPaths<T>>(
   url: URL,
@@ -21,18 +20,18 @@ export const tsoapy = <T extends OAPIPaths<T>>(
     return {
       method: <
         M extends MethodIn<T, P>,
-        CT extends RequestContentType<T, P, M>
+        CT extends RequestContentType<T, P, M> = RequestContentType<T, P, M>
       >(
         method: M,
         contentType?: CT,
         serialize?: Serializer<T, P, M, CT>
       ) => {
         // configurable by builder methods
-        let _params: ParamsIn<T, P, M> | undefined;
-        let _query: QueryIn<T, P, M> | undefined;
-        let _localHeaders: HeadersInit = {
+        const _localHeaders: HeadersInit = {
           "Content-Type": contentType ?? "application/json",
         };
+        let _params: ParamsIn<T, P, M> | undefined;
+        let _query: QueryIn<T, P, M> | undefined;
         let _body: string;
 
         // constants defined by calling method()

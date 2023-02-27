@@ -64,10 +64,10 @@ export type RequestContentType<
 > = T[P][M] extends {
   // try path.requestBody?.content
   requestBody?: {
-    content: infer MT;
+    content: infer ContentTypes;
   };
 }
-  ? keyof MT
+  ? keyof ContentTypes
   : // try path.requestBody.content
   T[P][M] extends {
       requestBody: {
@@ -210,7 +210,7 @@ export type BuilderAPI<
    * @argument deserialize A function that given `(text:string, status:number)` returns an object containing the `status` and `data` props
    */
   send: <
-    RCT extends ResponseContentType<T, P, M> = RequestContentType<T, P, M>
+    RCT extends ResponseContentType<T, P, M> = ResponseContentType<T, P, M>
   >(
     options?: RequestInit,
     contentType?: RCT,

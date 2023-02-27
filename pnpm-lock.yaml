@@ -3,13 +3,14 @@ lockfileVersion: 5.4
 specifiers:
   '@commitlint/cli': ^15.0.0
   '@commitlint/config-conventional': ^15.0.0
+  '@types/node': ^18.14.2
   '@typescript-eslint/eslint-plugin': ^5.40.1
   '@typescript-eslint/parser': ^5.40.1
   cross-fetch: ^3.1.5
-  eslint: ^8.10.0
-  eslint-config-prettier: ^8.5.0
+  eslint: ^8.34.0
+  eslint-config-prettier: ^8.6.0
   eslint-import-resolver-typescript: ^2.7.1
-  eslint-plugin-import: ^2.26.0
+  eslint-plugin-import: ^2.27.5
   eslint-plugin-node: ^11.1.0
   husky: ^7.0.4
   lint-staged: 13.0.3
@@ -25,6 +26,7 @@ specifiers:
 devDependencies:
   '@commitlint/cli': 15.0.0
   '@commitlint/config-conventional': 15.0.0
+  '@types/node': 18.14.2
   '@typescript-eslint/eslint-plugin': 5.53.0_ny4s7qc6yg74faf3d6xty2ofzy
   '@typescript-eslint/parser': 5.53.0_7kw3g6rralp5ps6mg3uyzz6azm
   cross-fetch: 3.1.5
@@ -655,6 +657,10 @@ packages:
 
   /@types/minimist/1.2.2:
     resolution: {integrity: sha512-jhuKLIRrhvCPLqwPcx6INqmKeiA5EWrsCOPhrlFSrbrmU4ZMPjj5Ul/oLCMDO98XRUIwVm78xICz4EPCektzeQ==}
+    dev: true
+
+  /@types/node/18.14.2:
+    resolution: {integrity: sha512-1uEQxww3DaghA0RxqHx0O0ppVlo43pJhepY51OxuQIKHpjbnYLA7vcdwioNPzIqmC2u3I/dmylcqjlh0e7AyUA==}
     dev: true
 
   /@types/normalize-package-data/2.4.1:
