@@ -1,20 +1,15 @@
 import type {
   BuilderAPI,
-  ContentTypeIn,
-  ContentTypeOut,
-  DefaultContentTypeIn,
-  DefaultContentTypeOut,
   Deserializer,
   ExtendedRequestInit,
   MethodIn,
   OAPIPaths,
-  OAPIResponse,
   ParamsIn,
   PathIn,
   QueryIn,
-  RequestOf,
+  RequestContentType,
   ResultCodeOf,
-  ResultOf,
+  RS,
   Serializer,
 } from "./types";
 
@@ -26,11 +21,11 @@ export const tsoapy = <T extends OAPIPaths<T>>(
     return {
       method: <
         M extends MethodIn<T, P>,
-        CT extends ContentTypeIn<T, P, M> = DefaultContentTypeIn<T, P, M>
+        CT extends RequestContentType<T, P, M>
       >(
         method: M,
         contentType?: CT,
-        serialize?: Serializer<RequestOf<T, P, M, CT>, string>
+        serialize?: Serializer<T, P, M, CT>
       ) => {
         // configurable by builder methods
         let _params: ParamsIn<T, P, M> | undefined;
@@ -68,13 +63,18 @@ export const tsoapy = <T extends OAPIPaths<T>>(
             const { fetch: of, ...init } = ctx ?? {};
             const f = (of ?? globalThis.fetch ?? fetch) as typeof fetch;
 
-            // force the noop to a passthrough deserializer
-            const noop = ((t: unknown) => t) as NonNullable<typeof deserialize>;
+            const defaultDeserialize = ((t, c) => {
+              return {
+                status: c,
+                data:
+                  typeof contentType === "undefined" ||
+                  contentType === "application/json"
+                    ? JSON.parse(t)
+                    : t,
+              };
+            }) as Deserializer<T, P, M, NonNullable<typeof contentType>>;
 
-            const deserializer: NonNullable<typeof deserialize> =
-              deserialize ?? contentType === "application/json"
-                ? (t) => JSON.parse(t)
-                : noop;
+            const deserializer = deserialize ?? defaultDeserialize;
 
             // build final URL
             const req = new URL(url);
@@ -108,25 +108,11 @@ export const tsoapy = <T extends OAPIPaths<T>>(
                   }),
             });
 
-            const status: ResultCodeOf<T, P, M> = res.status as ResultCodeOf<
-              T,
-              P,
-              M
-            >;
             const t = await res.text();
-            const j = deserializer(t, status);
-            const resp: OAPIResponse<
-              T,
-              P,
-              M,
-              NonNullable<typeof contentType>
-            > = {
-              success: status === 200,
-              status: status,
-              data: j,
-            };
+            const statusCode = res.status as ResultCodeOf<T, P, M>;
+            const j = deserializer(t, statusCode);
 
-            return resp;
+            return j;
           },
         };
 

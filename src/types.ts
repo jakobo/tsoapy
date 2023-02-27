@@ -1,20 +1,32 @@
-/** Supported HTTP methods */
-type Method = "get" | "post" | "put" | "patch" | "delete" | "head" | "options";
+// helper to simplify accessing the type of the value of an object
+type ValueOf<T> = T[keyof T];
 
-/** Describes the OpenAPI `paths` object */
+/**
+ * Extends the base fetch options with the ability to override our
+ * fetch function
+ */
+export type ExtendedRequestInit = RequestInit & {
+  fetch?: unknown;
+};
+
+/**
+ * Describes the OpenAPI `paths` object in generic terms
+ * These are based on the type generation from
+ * https://github.com/drwpow/openapi-typescript, which exports
+ * a `paths` object for our template. The returned type gives us
+ * a structure that is used for subsequent generics because we
+ * can assume T conforms to this shape.
+ * @template T the openapi-typescript paths object
+ */
 export type OAPIPaths<T> = {
   [P in keyof T]: {
-    [M in Method]?: {
+    [M in keyof T[P]]: {
       requestBody?: {
-        content: {
-          "application/json"?: unknown;
-          [contentType: string]: unknown;
-        };
+        content: unknown;
       };
       responses: {
         [S: number]: {
           content: {
-            "application/json"?: unknown;
             [contentType: string]: unknown;
           };
         };
@@ -23,17 +35,29 @@ export type OAPIPaths<T> = {
   };
 };
 
-/** Get all available Paths for an OpenAPI collection */
+/**
+ * Get all available Paths
+ * 1. for a given an OpenAPI paths type
+ */
 export type PathIn<T extends OAPIPaths<T>> = keyof T;
 
-/** Get all available Methods for a given OpenAPI collection and Path */
+/**
+ * Get all available Methods
+ * 1. for a given OpenAPI paths type
+ * 2. with a given Path key
+ */
 export type MethodIn<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>
 > = keyof T[P];
 
-/** Get all available Mime Types for a given OpenAPI collection, Path, and Method combo */
-export type ContentTypeIn<
+/**
+ * Get all available request Content Types
+ * 1. for a given OpenAPI paths type
+ * 2. with a given Path key
+ * 3. with the given Method key
+ */
+export type RequestContentType<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>,
   M extends MethodIn<T, P> = MethodIn<T, P>
@@ -47,26 +71,20 @@ export type ContentTypeIn<
   : // try path.requestBody.content
   T[P][M] extends {
       requestBody: {
-        content: infer MT_B;
+        content: infer ContentTypes;
       };
     }
-  ? keyof MT_B
+  ? keyof ContentTypes
   : // no OpenAPI 3 request bodies found
     never;
 
-/** Get the default Mime Type of application/json if it is available in ContentTypeIn */
-export type DefaultContentTypeIn<
-  T extends OAPIPaths<T>,
-  P extends PathIn<T> = PathIn<T>,
-  M extends MethodIn<T, P> = MethodIn<T, P>
-> = ContentTypeIn<T, P, M> extends {
-  ["application/json"]: unknown;
-}
-  ? ContentTypeIn<T, P, M>["application/json"]
-  : ContentTypeIn<T, P, M>;
-
-/** Get all available return Mime Types for a given OpenAPI collection, Path, and Method combo */
-export type ContentTypeOut<
+/**
+ * Get all available response Content Types irrespective of response code
+ * 1. for a given OpenAPI paths type
+ * 2. with a given Path key
+ * 3. with the given Method key
+ */
+export type ResponseContentType<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>,
   M extends MethodIn<T, P> = MethodIn<T, P>
@@ -80,18 +98,12 @@ export type ContentTypeOut<
   ? keyof MT
   : never;
 
-/** Get the default Mime Type of application/json if it is available in ContentTypeOut */
-export type DefaultContentTypeOut<
-  T extends OAPIPaths<T>,
-  P extends PathIn<T> = PathIn<T>,
-  M extends MethodIn<T, P> = MethodIn<T, P>
-> = ContentTypeOut<T, P, M> extends {
-  ["application/json"]: unknown;
-}
-  ? ContentTypeOut<T, P, M>["application/json"]
-  : ContentTypeOut<T, P, M>;
-
-/** Get the collection of Parameter substituions available for a given OpenAPI collection, Path, and Method combo */
+/**
+ * Get the collection of Parameter substituions available
+ * 1. for a given OpenAPI paths type
+ * 2. with a given Path key
+ * 3. with the given Method key
+ */
 export type ParamsIn<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>,
@@ -104,7 +116,12 @@ export type ParamsIn<
   ? S
   : never;
 
-/** Get the collection of Query String arguments available for a given OpenAPI collection, Path, and Method combo */
+/**
+ * Get the collection of Query String arguments available
+ * 1. for a given OpenAPI paths type
+ * 2. with a given Path key
+ * 3. with the given Method key
+ */
 export type QueryIn<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>,
@@ -117,52 +134,137 @@ export type QueryIn<
   ? S
   : never;
 
-/** Get a specific request variant for a given OpenAPI collection, Path, Method, and MimeType combo */
+/**
+ * Get a specific Type for a request
+ * 1. for a given OpenAPI paths type
+ * 2. with a given Path key
+ * 3. with the given Method key
+ * 4. with the given ContentType key
+ */
 export type RequestOf<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>,
   M extends MethodIn<T, P> = MethodIn<T, P>,
-  MT extends ContentTypeOut<T, P, M> = ContentTypeOut<T, P, M>
+  RCT extends RequestContentType<T, P, M> = RequestContentType<T, P, M>
 > = T[P][M] extends {
   requestBody?: {
     content: {
-      [mime in MT]: infer O;
+      [contentType in RCT]: infer O;
     };
   };
 }
   ? O
   : never;
 
-/** Serialize from JSON to your requested MimeType format */
-export type Serializer<T, R> = (input: T) => R;
-
-/** Deserialize from text (assumed to be of your MimeType format) to JSON */
-export type Deserializer<T, C extends number, R> = (input: T, status: C) => R;
-
-/** The flexible builder API allows you to set params, query, body, and ultimately send the request */
+/**
+ * The flexible builder API allows you to configure your request before sending.
+ * It's customized
+ * 1. for a given OpenAPI paths type
+ * 2. with a given Path key
+ * 3. with the given Method key
+ * 4. with the given ContentType key from .method() further up the API chain
+ */
 export type BuilderAPI<
   T extends OAPIPaths<T>,
   P extends PathIn<T> = PathIn<T>,
   M extends MethodIn<T, P> = MethodIn<T, P>,
-  CT extends ContentTypeIn<T, P, M> = DefaultContentTypeIn<T, P, M>
+  SCT extends RequestContentType<T, P, M> = RequestContentType<T, P, M>
 > = {
-  params: <PI extends ParamsIn<T, P, M>>(params: PI) => BuilderAPI<T, P, M>;
-  query: <QS extends QueryIn<T, P, M>>(query: QS) => BuilderAPI<T, P, M>;
-  body: <RQ extends RequestOf<T, P, M, CT> = RequestOf<T, P, M, CT>>(
+  /**
+   * Set parameters on the request, such as /pet/{petId}
+   * 1. for a given OpenAPI paths type
+   * 2. with a given Path key
+   * 3. with the given Method key
+   * 4. for the given ContentType key from .method()
+   */
+  params: <PI extends ParamsIn<T, P, M>>(
+    params: PI
+  ) => BuilderAPI<T, P, M, SCT>;
+  /**
+   * Add query string key/value pairs to the request such as /pet/{petId}?confirm=2023
+   * 1. for a given OpenAPI paths type
+   * 2. with a given Path key
+   * 3. with the given Method key
+   * 4. for the given ContentType key from .method()
+   */
+  query: <QS extends QueryIn<T, P, M>>(query: QS) => BuilderAPI<T, P, M, SCT>;
+  /**
+   * Set the body for the request
+   * 1. for a given OpenAPI paths type
+   * 2. with a given Path key
+   * 3. with the given Method key
+   * 4. for the given ContentType key from .method()
+   */
+  body: <RQ extends RequestOf<T, P, M, SCT> = RequestOf<T, P, M, SCT>>(
     request?: RQ
-  ) => BuilderAPI<T, P, M>;
-  send: <RCT extends ContentTypeOut<T, P, M> = DefaultContentTypeOut<T, P, M>>(
+  ) => BuilderAPI<T, P, M, SCT>;
+  /**
+   * Send the request via `fetch` and receive a promised response containing `status` and `data`, typed
+   * 1. for a given OpenAPI paths type
+   * 2. with a given Path key
+   * 3. with the given Method key
+   * 4. with the Response ContentType inferred from `contentType` if set
+   *
+   * @argument options Additional `fetch` options to add to the request
+   * @argument contentType A content type valid for this builder
+   * @argument deserialize A function that given `(text:string, status:number)` returns an object containing the `status` and `data` props
+   */
+  send: <
+    RCT extends ResponseContentType<T, P, M> = RequestContentType<T, P, M>
+  >(
     options?: RequestInit,
     contentType?: RCT,
-    deserialize?: Deserializer<
-      string,
-      ResultCodeOf<T, P, M>,
-      ResultOf<T, P, M, ResultCodeOf<T, P, M>, RCT>
-    >
-  ) => Promise<OAPIResponse<T, P, M, RCT>>;
+    deserialize?: Deserializer<T, P, M, RCT>
+  ) => Promise<RS<T, P, M, RCT>>;
 };
 
-/** Extract the status code type from the T.<path>.<method>.responses.<code> */
+/**
+ * Serialize from a JS object to your requested ContentType format
+ * 1. for a given OpenAPI paths type
+ * 2. with a given Path key
+ * 3. with the given Method key
+ * 4. with a given Request Content Type key
+ */
+export type Serializer<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T> = PathIn<T>,
+  M extends MethodIn<T, P> = MethodIn<T, P>,
+  RCT extends RequestContentType<T, P, M> = RequestContentType<T, P, M>
+> = (input: RequestOf<T, P, M, RCT>) => string;
+
+/**
+ * Deserialize from text to a JS object
+ * 1. for a given OpenAPI paths type
+ * 2. with a given Path key
+ * 3. with the given Method key
+ * 4. with an object structure matching a valid ResponseContentType
+ */
+export type Deserializer<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T> = PathIn<T>,
+  M extends MethodIn<T, P> = MethodIn<T, P>,
+  RCT extends ResponseContentType<T, P, M> = RequestContentType<T, P, M>
+> = (
+  input: string,
+  status: ResultCodeOf<T, P, M>
+) => DeserializeResponse<T, P, M, RCT>;
+
+// helper: Used to split the deserialized response from the RS object
+// it's likely these can drift, so it is useful to call it out separately
+// for now.
+type DeserializeResponse<
+  T extends OAPIPaths<T>,
+  P extends PathIn<T>,
+  M extends MethodIn<T, P>,
+  ContentType extends ResponseContentType<T, P, M>
+> = RS<T, P, M, ContentType>;
+
+/**
+ * Extract the status code keys as a union such as `200 | 403`
+ * 1. for a given OpenAPI paths type
+ * 2. with a given Path key
+ * 3. with the given Method key
+ */
 export type ResultCodeOf<
   T extends OAPIPaths<T>,
   P extends PathIn<T>,
@@ -175,38 +277,42 @@ export type ResultCodeOf<
   ? C
   : never;
 
-/** Extract the response body from the T.<path>.<method>.responses.<code>.content */
-export type ResultOf<
+/**
+ * Generates a discrinimated union suitable for a developer to interpret
+ * a tsoapy response
+ * 1. for a given OpenAPI paths type
+ * 2. with a given Path key
+ * 3. with a given Method key
+ * 4. with the given ContentType conforming to valid response content types
+ */
+export type RS<
   T extends OAPIPaths<T>,
   P extends PathIn<T>,
   M extends MethodIn<T, P>,
-  C extends number,
-  MT extends ContentTypeOut<T, P, M>
-> = T[P][M] extends {
-  responses: {
-    [Code in C]: {
-      content: {
-        [mime in MT]: infer RB;
-      };
-    };
-  };
-}
-  ? RB
-  : never;
-
-/** Re-Describe the OpenAPI Response as a discriminated union, making it easier on developers */
-export type OAPIResponse<
-  T extends OAPIPaths<T>,
-  P extends PathIn<T>,
-  M extends MethodIn<T, P>,
-  MimeType extends ContentTypeOut<T, P, M>
-> = {
-  success: boolean;
-  status: ResultCodeOf<T, P, M>;
-  data: ResultOf<T, P, M, ResultCodeOf<T, P, M>, MimeType>;
-};
-
-/** Extends the base fetch init with the ability to override our fetch function */
-export type ExtendedRequestInit = RequestInit & {
-  fetch?: unknown;
-};
+  ContentType extends ResponseContentType<T, P, M>
+> = ValueOf<
+  // get the value of "responses" infer into Res
+  T[P][M] extends {
+    responses: infer Res;
+  }
+    ? {
+        // if marked as never, return status only
+        [Code in keyof Res]: Res[Code] extends never
+          ? { status: Code }
+          : // else if it contains a content region, continue
+          Res[Code] extends {
+              content: infer CT;
+            }
+          ? // if it contains a content type match, infer data
+            CT extends {
+              [CType in ContentType]: infer Data;
+            }
+            ? // return status + data
+              { status: Code; data: Data }
+            : // no content type match, it is just status
+              { status: Code }
+          : // no content region found, it is just status
+            { status: Code };
+      }
+    : never
+>;

@@ -3,6 +3,7 @@ import { tsoapy } from "../";
 
 const client = tsoapy<paths>(new URL("https://example.com/api/petstore"));
 
+// a set of async examples
 async function examples() {
   const r1 = await client
     .path("/store/order")
@@ -17,9 +18,10 @@ async function examples() {
     })
     .send();
   if (r1.status === 200) {
-    r1.data.id; // <= from response
+    r1.data.id; // number | undefined
   } else {
-    r1.data;
+    // r1.data.id;
+    //    ~~~~ error, !200 does not contain data
   }
 
   const r2 = await client
@@ -30,9 +32,9 @@ async function examples() {
     })
     .send<"application/xml">();
   if (r1.status === 200) {
-    r1.data.id; // <= from response
+    r1.data.id; // number | undefined
   } else {
-    r1.data;
+    // no data
   }
 
   const r3 = await client
@@ -47,11 +49,36 @@ async function examples() {
       photoUrls: [],
     })
     .send({}, "application/xml", (t, code) => {
+      // you must serialize for all responses, so this will not work
+      // return {
+      //   status: code
+      // };
+
       // a hypotnetical XML to JSON transformer
-      return {
-        name: "Skippy The Magnificent",
-        photoUrls: [],
-      };
+      if (code === 200) {
+        return {
+          status: code,
+          data: {
+            name: "Skippy The Magnificent",
+            photoUrls: [],
+          },
+        };
+      }
+      // TS will catch this
+      // else if (code === 999) {
+      //   return {
+      //     id: 1234
+      //   }
+      // }
+      else {
+        return {
+          status: code,
+        };
+      }
+
+      // if you do not deserialize for all codes, you will create
+      // a type error, as every return value must conform with the valid
+      // return types provided in the OpenAPI typings
     });
 
   const r4 = await client
