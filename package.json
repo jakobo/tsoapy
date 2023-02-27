@@ -9,10 +9,11 @@
   "scripts": {
     "build": "run-s tsup",
     "clean": "shx rm -rf dist && shx mkdir dist",
+    "eslint": "eslint",
     "gen": "run-p 'generate:*'",
     "generate:petstore": "openapi-typescript https://petstore3.swagger.io/api/v3/openapi.yaml --path-params-as-types --output ./src/__generated__/petstore.ts",
-    "eslint": "eslint",
     "lint-staged": "lint-staged",
+    "prepare": "husky install",
     "rel": "release-it",
     "test": "echo \"Error: no test specified\" && exit 1",
     "tsup": "tsup",
