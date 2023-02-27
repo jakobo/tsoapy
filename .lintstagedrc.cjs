@@ -5,7 +5,6 @@ module.exports = {
     () => "syncpack format",
     "prettier --write",
   ],
-  "packages/**/package.json": [() => "syncpack format", "prettier --write"],
 
   ...["src"].reduce((actions, pkg) => {
     actions[`${pkg}/**/*.{cjs,mjs,js,jsx,ts,tsx}`] = [
