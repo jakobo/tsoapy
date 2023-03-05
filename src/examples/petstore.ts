@@ -64,6 +64,9 @@ export async function examples() {
           },
         };
       }
+      if (code === 405) {
+        return { status: code };
+      }
       // TS will catch this
       // else if (code === 999) {
       //   return {

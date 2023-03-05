@@ -6,12 +6,9 @@ module.exports = {
     "prettier --write",
   ],
 
-  ...["src"].reduce((actions, pkg) => {
-    actions[`${pkg}/**/*.{cjs,mjs,js,jsx,ts,tsx}`] = [
-      // "eslint --fix",
-      () => `tsc --project ./${pkg}/tsconfig.json --noEmit`,
-      "prettier --write",
-    ];
-    return actions;
-  }, {}),
+  "./src/**/*.{cjs,mjs,js,jsx,ts,tsx}": [
+    // "eslint --fix",
+    () => `tsc --project ./tsconfig.json --noEmit`,
+    "prettier --write",
+  ],
 };

@@ -7,31 +7,37 @@ import type {
   ParamsIn,
   PathIn,
   QueryIn,
-  RequestContentType,
+  RequestContentTypeIn,
   ResultCodeOf,
   Serializer,
 } from "./types.js";
 
-export const tsoapy = <T extends OAPIPaths<T>>(
+export type { Serializer, Deserializer, OAPIPaths } from "./types.js";
+
+export const tsoapy = <Paths extends OAPIPaths<Paths>>(
   url: URL,
   ctx?: ExtendedRequestInit
 ) => ({
-  path: <P extends PathIn<T>>(path: P) => {
+  path: <Path extends PathIn<Paths>>(path: Path) => {
     return {
       method: <
-        M extends MethodIn<T, P>,
-        CT extends RequestContentType<T, P, M> = RequestContentType<T, P, M>
+        Method extends MethodIn<Paths, Path>,
+        RequestContentType extends RequestContentTypeIn<
+          Paths,
+          Path,
+          Method
+        > = RequestContentTypeIn<Paths, Path, Method>
       >(
-        method: M,
-        contentType?: CT,
-        serialize?: Serializer<T, P, M, CT>
+        method: Method,
+        contentType?: RequestContentType,
+        serialize?: Serializer<Paths, Path, Method, RequestContentType>
       ) => {
         // configurable by builder methods
         const _localHeaders: HeadersInit = {
           "Content-Type": contentType ?? "application/json",
         };
-        let _params: ParamsIn<T, P, M> | undefined;
-        let _query: QueryIn<T, P, M> | undefined;
+        let _params: ParamsIn<Paths, Path, Method> | undefined;
+        let _query: QueryIn<Paths, Path, Method> | undefined;
         let _body: string;
 
         // constants defined by calling method()
@@ -45,7 +51,7 @@ export const tsoapy = <T extends OAPIPaths<T>>(
             : serialize ?? bestEffort;
 
         // chainable builder API, terminates on send()
-        const builder: BuilderAPI<T, P, M, CT> = {
+        const builder: BuilderAPI<Paths, Path, Method, RequestContentType> = {
           params(params) {
             _params = params;
             return builder;
@@ -71,7 +77,12 @@ export const tsoapy = <T extends OAPIPaths<T>>(
                     ? JSON.parse(t)
                     : t,
               };
-            }) as Deserializer<T, P, M, NonNullable<typeof contentType>>;
+            }) as Deserializer<
+              Paths,
+              Path,
+              Method,
+              NonNullable<typeof contentType>
+            >;
 
             const deserializer = deserialize ?? defaultDeserialize;
 
@@ -108,7 +119,7 @@ export const tsoapy = <T extends OAPIPaths<T>>(
             });
 
             const t = await res.text();
-            const statusCode = res.status as ResultCodeOf<T, P, M>;
+            const statusCode = res.status as ResultCodeOf<Paths, Path, Method>;
             const j = deserializer(t, statusCode);
 
             return j;
