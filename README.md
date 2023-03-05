@@ -10,7 +10,7 @@
 Taken from the [Pet Store Example](https://github.com/jakobo/tsoapy/blob/main/src/examples/petstore.ts)
 
 ```ts
-import { paths } from "../__generated__/petstore";
+import type { paths } from "../__generated__/petstore";
 import { tsoapy } from "../";
 
 const client = tsoapy<paths>(new URL("https://example.com/api/petstore"));
@@ -31,15 +31,9 @@ const r1 = await client
   // send the request and get a descriminated union as a response
   .send();
 
-if (r1.success) {
-  // quickly check a status === 200
-}
-
 if (r1.status === 200) {
-  // or do more detailed checks on the status code
+  // union is discriminated on .status, and contains a .data property
   r1.data.id; // <= typed from response
-} else {
-  r1.data;
 }
 ```
 
@@ -49,22 +43,30 @@ Descriptions here provide a generic type such as `string` for clarity, but use a
 
 ## `tsoapy<paths>(url: URL, ctx?: ExtendedRequestInit)`
 
+Configure the initial value of tsoapy, including the URL base all `path` values are derrived from, and any `RequestInit` options you want to share between all chained methods.
+
+**Returns:** An object containing the single `.path()` method.
+
 | arg | description                                                                                                |
 | :-- | :--------------------------------------------------------------------------------------------------------- |
 | url | `URL` The endpoint URL for your OpenAPI calls                                                              |
 | ctx | Options to persist into `fetch` calls. You may also specify `ctx.fetch` to use a non-global fetch instance |
 
-**Returns:** A tsoapy builder object containing a single `path` method.
+#### _tsoapy()_`.path(path: string)`
 
-#### `.path(path: string)`
+Select a `path` from the tsoapy collection.
+
+**Returns:** An object containing the single `.method()` method.
 
 | arg  | description                                       |
 | :--- | :------------------------------------------------ |
 | path | `string` A path contained in your `OpenAPI` types |
 
-**Returns:** A tsoapy builder object containing a single `method` method.
+#### _tsoapy().path()_`.method(method: string, contentType?: string, serialize: Function)`
 
-#### `.method(method: string, contentType?: string, serialize: Function)`
+Select a `method` from the tsoapy collection, constrained to the previously built `path`. Because OpenAPI JSON is top-down desiged (`path => method => params`), you need to have a path before you can select a method. During method selection, you can specify a content type other than the default `application/json`, and set up a custom `serialize` function for converting your request object to a string.
+
+**Returns:** A tsoapy builder object for configuring the request data, containing `params`, `query`, `body`, and `send`
 
 | arg         | description                                                                                                                                                                                                                         |
 | :---------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -72,33 +74,43 @@ Descriptions here provide a generic type such as `string` for clarity, but use a
 | contentType | `string` A supported content type found in `OpenAPI[path][method].requestBody.content`                                                                                                                                              |
 | serialize   | `function` A function that takes in the arguments of `OpenAPI[path][method].requestBody.content[contentType]` and returns a `string`. Defaults to `JSON.serialize` for `application/json` and `toString()` for other content types. |
 
-**Returns:** A tsoapy builder object for configuring the request data, containing `params`, `query`, `body`, and `send`
+## Tsoapy Builder `Builder`
 
-#### `.params(params: object)`
+After chaining `tsoapy().path().method()`, the API opens up in order to configure and send the request. Depending on your OpenAPI endpoint, you may need to set URL parameters, configure query string values, or set the request body. Once configured, you can send the request via `.send()`, returning a promise containing the API result.
+
+#### _tsoapy().path().method()..._`.params(params: object)`
+
+Set URL parameters in a request such as `/pet/{petId}`.
+
+**Returns:** `Builder` object for configuring the request data, containing `params`, `query`, `body`, and `send`
 
 | arg    | description                                                                   |
 | :----- | :---------------------------------------------------------------------------- |
 | params | `object` Details parameters to substitue into the url, such as `/pet/{petId}` |
 
-**Returns:** A tsoapy builder object for configuring the request data, containing `params`, `query`, `body`, and `send`
+#### _tsoapy().path().method()..._`.query(query: object)`
 
-#### `.query(query: object)`
+Set query string parameters for the request.
+
+**Returns:** `Builder` object for configuring the request data, containing `params`, `query`, `body`, and `send`
 
 | arg   | description                                                 |
 | :---- | :---------------------------------------------------------- |
 | query | `object` Details query string values to append onto the url |
 
-**Returns:** A tsoapy builder object for configuring the request data, containing `params`, `query`, `body`, and `send`
+#### _tsoapy().path().method()..._`.body(body: object)`
 
-#### `.body(body: object)`
+Set the body for the request. Will use `serializer` to conver the object to a suitable string, defaulting to `JSON.stringify()`.
+
+**Returns:** `Builder` object for configuring the request data, containing `params`, `query`, `body`, and `send`
 
 | arg  | description                                                                                                                                                                                               |
 | :--- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | body | `object` Operation variables. Will be serialized to a string using the provided `serialize`, and falling back to `JSON.stringify` for the `application/json` content type and `toString()` for all others |
 
-**Returns:** A tsoapy builder object for configuring the request data, containing `params`, `query`, `body`, and `send`
+#### _tsoapy().path().method()..._`.send(options?: RequestInit, contentType?: string, deserialize?: Function):Promise`
 
-#### `async .send(options?: RequestInit, contentType?: string, deserialize?: Function)`
+Send the request via `fetch`.
 
 | arg         | description                                                                                                                                                                                                                                                        |
 | :---------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -110,7 +122,6 @@ Descriptions here provide a generic type such as `string` for clarity, but use a
 
 ```ts
 {
-  success: boolean;
   status: number;
   data: object;
 }
@@ -118,7 +129,6 @@ Descriptions here provide a generic type such as `string` for clarity, but use a
 
 | property | description                                                       |
 | :------- | :---------------------------------------------------------------- |
-| success  | `boolean` Evaluates to `true` when `status === 200`               |
 | status   | `number` Discriminator based on the response code from the server |
 | data     | `object` Content from the request                                 |
 
