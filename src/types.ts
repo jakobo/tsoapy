@@ -18,7 +18,7 @@ export type ExtendedRequestInit = RequestInit & {
  * can assume T conforms to this shape.
  * @template T the openapi-typescript paths object
  */
-export type OAPIPaths<Paths> = {
+export type OpenAPIPaths<Paths> = {
   [Path in keyof Paths]: {
     [Method in keyof Paths[Path]]: {
       requestBody?: {
@@ -39,7 +39,7 @@ export type OAPIPaths<Paths> = {
  * Get all available Paths
  * 1. for a given an OpenAPI paths type
  */
-export type PathIn<Paths extends OAPIPaths<Paths>> = keyof Paths;
+export type PathIn<Paths extends OpenAPIPaths<Paths>> = keyof Paths;
 
 /**
  * Get all available Methods
@@ -47,7 +47,7 @@ export type PathIn<Paths extends OAPIPaths<Paths>> = keyof Paths;
  * 2. with a given Path key
  */
 export type MethodIn<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths> = PathIn<Paths>
 > = keyof Paths[Path];
 
@@ -58,7 +58,7 @@ export type MethodIn<
  * 3. with the given Method key
  */
 export type RequestContentTypeIn<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths> = PathIn<Paths>,
   Method extends MethodIn<Paths, Path> = MethodIn<Paths, Path>
 > = Paths[Path][Method] extends {
@@ -85,7 +85,7 @@ export type RequestContentTypeIn<
  * 3. with the given Method key
  */
 export type ResponseContentTypeIn<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths> = PathIn<Paths>,
   Method extends MethodIn<Paths, Path> = MethodIn<Paths, Path>
 > = Paths[Path][Method] extends {
@@ -105,7 +105,7 @@ export type ResponseContentTypeIn<
  * 3. with the given Method key
  */
 export type ParamsIn<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths> = PathIn<Paths>,
   Method extends MethodIn<Paths, Path> = MethodIn<Paths, Path>
 > = Paths[Path][Method] extends {
@@ -123,7 +123,7 @@ export type ParamsIn<
  * 3. with the given Method key
  */
 export type QueryIn<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths> = PathIn<Paths>,
   Method extends MethodIn<Paths, Path> = MethodIn<Paths, Path>
 > = Paths[Path][Method] extends {
@@ -142,7 +142,7 @@ export type QueryIn<
  * 4. with the given ContentType key
  */
 export type RequestOf<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths> = PathIn<Paths>,
   Method extends MethodIn<Paths, Path> = MethodIn<Paths, Path>,
   ContentType extends RequestContentTypeIn<
@@ -169,7 +169,7 @@ export type RequestOf<
  * 4. with the given ContentType key from .method() further up the API chain
  */
 export type BuilderAPI<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths> = PathIn<Paths>,
   Method extends MethodIn<Paths, Path> = MethodIn<Paths, Path>,
   RequestContentType extends RequestContentTypeIn<
@@ -247,7 +247,7 @@ export type BuilderAPI<
  * 4. with a given Request Content Type key
  */
 export type Serializer<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths> = PathIn<Paths>,
   Method extends MethodIn<Paths, Path> = MethodIn<Paths, Path>,
   RequestContentType extends RequestContentTypeIn<
@@ -265,7 +265,7 @@ export type Serializer<
  * 4. with an object structure matching a valid ResponseContentType
  */
 export type Deserializer<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths> = PathIn<Paths>,
   Method extends MethodIn<Paths, Path> = MethodIn<Paths, Path>,
   ResponseContentType extends ResponseContentTypeIn<
@@ -282,7 +282,7 @@ export type Deserializer<
 // it's likely these can drift, so it is useful to call it out separately
 // for now.
 type DeserializeResponse<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths>,
   Method extends MethodIn<Paths, Path>,
   ContentType extends ResponseContentTypeIn<Paths, Path, Method>
@@ -295,7 +295,7 @@ type DeserializeResponse<
  * 3. with the given Method key
  */
 export type ResultCodeOf<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths> = PathIn<Paths>,
   Method extends MethodIn<Paths, Path> = MethodIn<Paths, Path>
 > = Paths[Path][Method] extends {
@@ -313,6 +313,28 @@ type ResponseContentOf<T> = T extends {
   : never;
 
 /**
+ * Describes the Tsoapy chain for a set of OpenAPIPaths
+ */
+export type Builder<Paths extends OpenAPIPaths<Paths>> = {
+  path: <Path extends PathIn<Paths>>(
+    path: Path
+  ) => {
+    method: <
+      Method extends MethodIn<Paths, Path>,
+      RequestContentType extends RequestContentTypeIn<
+        Paths,
+        Path,
+        Method
+      > = RequestContentTypeIn<Paths, Path, Method>
+    >(
+      method: Method,
+      contentType?: RequestContentType,
+      serialize?: Serializer<Paths, Path, Method, RequestContentType>
+    ) => BuilderAPI<Paths, Path, Method, RequestContentType>;
+  };
+};
+
+/**
  * Generates a discrinimated union suitable for a developer to interpret
  * a tsoapy response
  * 1. for a given OpenAPI paths type
@@ -321,7 +343,7 @@ type ResponseContentOf<T> = T extends {
  * 4. with the given ContentType conforming to valid response content types
  */
 export type ResponseOf<
-  Paths extends OAPIPaths<Paths>,
+  Paths extends OpenAPIPaths<Paths>,
   Path extends PathIn<Paths>,
   Method extends MethodIn<Paths, Path>,
   ResponseContentType extends ResponseContentTypeIn<Paths, Path, Method>

@@ -3,21 +3,29 @@ import type {
   Deserializer,
   ExtendedRequestInit,
   MethodIn,
-  OAPIPaths,
+  OpenAPIPaths,
   ParamsIn,
   PathIn,
   QueryIn,
   RequestContentTypeIn,
   ResultCodeOf,
   Serializer,
+  Builder,
 } from "./types.js";
 
-export type { Serializer, Deserializer, OAPIPaths } from "./types.js";
+export type {
+  Serializer,
+  Deserializer,
+  OpenAPIPaths,
+  RequestOf,
+  ResponseOf,
+  Builder,
+} from "./types.js";
 
-export const tsoapy = <Paths extends OAPIPaths<Paths>>(
+export const tsoapy = <Paths extends OpenAPIPaths<Paths>>(
   url: URL,
   ctx?: ExtendedRequestInit
-) => ({
+): Builder<Paths> => ({
   path: <Path extends PathIn<Paths>>(path: Path) => {
     return {
       method: <
@@ -33,15 +41,15 @@ export const tsoapy = <Paths extends OAPIPaths<Paths>>(
         serialize?: Serializer<Paths, Path, Method, RequestContentType>
       ) => {
         // configurable by builder methods
-        const _localHeaders: HeadersInit = {
-          "Content-Type": contentType ?? "application/json",
-        };
         let _params: ParamsIn<Paths, Path, Method> | undefined;
         let _query: QueryIn<Paths, Path, Method> | undefined;
         let _body: string;
 
-        // constants defined by calling method()
+        // constants defined by calling method() up-chain
         const _contentType = contentType ?? "application/json";
+        const _localHeaders: HeadersInit = {
+          "Content-Type": contentType ?? "application/json",
+        };
         const bestEffort = (d: unknown) =>
           d && typeof d === "object" && "toString" in d ? d.toString() : `${d}`;
         const serializer =
@@ -50,7 +58,7 @@ export const tsoapy = <Paths extends OAPIPaths<Paths>>(
             ? JSON.stringify
             : serialize ?? bestEffort;
 
-        // chainable builder API, terminates on send()
+        // chainable reflexive builder API, terminates on send()
         const builder: BuilderAPI<Paths, Path, Method, RequestContentType> = {
           params(params) {
             _params = params;
